@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define THRESHOLD 22
+#define THRESHOLD 30
 
 static void usage(const char *program)
 {
@@ -70,10 +70,19 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // ALOCA MASCARA PARA FILTRAGEM
+    uint8_t *mask = calloc(1, y_size); 
+    if (!mask) {
+        fprintf(stderr, "Falha ao alocar %zu bytes para a mascara.\n", y_size);
+        return 1;
+    }
+
     FILE *file = fopen(path, "rb");
     if (!file) {
         fprintf(stderr, "Falha ao abrir %s: %s\n", path, strerror(errno));
         free(frame);
+        free(prev_y_plane);
+        free(mask);
         return 1;
     }
 
@@ -81,6 +90,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL_Init falhou: %s\n", SDL_GetError());
         fclose(file);
         free(frame);
+        free(prev_y_plane);
+        free(mask);
         return 1;
     }
 
@@ -95,6 +106,8 @@ int main(int argc, char **argv)
         SDL_Quit();
         fclose(file);
         free(frame);
+        free(prev_y_plane);
+        free(mask);
         return 1;
     }
 
@@ -105,6 +118,8 @@ int main(int argc, char **argv)
         SDL_Quit();
         fclose(file);
         free(frame);
+        free(prev_y_plane);
+        free(mask);
         return 1;
     }
 
@@ -120,12 +135,16 @@ int main(int argc, char **argv)
         SDL_Quit();
         fclose(file);
         free(frame);
+        free(prev_y_plane);
+        free(mask);
         return 1;
     }
 
     const uint32_t frame_delay_ms = 1000u / (uint32_t)fps;
     int running = 1;
     int paused = 0;
+
+    int delta[4] = {-1, 1, -width, width};
 
     while (running) {
         uint32_t started_ms = SDL_GetTicks();
@@ -168,8 +187,6 @@ int main(int argc, char **argv)
             const uint8_t *u_plane = frame + y_size; // Vem logo depois
             const uint8_t *v_plane = frame + y_size + uv_size; // Vem depois dos planos y e u
             
-
-            // SE EXISTIR PREV_Y_PLANE
             if (prev_y_plane) {
                 for (int i = 0; i < y_size; i++) {
                     uint8_t original_pix = y_plane[i];
@@ -180,10 +197,35 @@ int main(int argc, char **argv)
                     prev_y_plane[i] = original_pix;
 
                     if (diff >= THRESHOLD) {
-                        y_plane[i] = 255; // PINTA DE BRANCO
+                        mask[i] = 1;
                     } else {
-                        y_plane[i] /= 2; // ESCURECE O FUNDO IMOVEL
+                        mask[i] = 0;
                     }
+                }
+            }
+
+            // VERIFICA MASK SEM OUT OF BOUNDS
+            for (int i = width; i < y_size - width; i++) {
+                if (mask[i]) {
+                    int n_mov = 0; // QUANTIDADE DE VIZINHOS EM MOVIMENTO
+
+                    for (int k = 0; k < 4; k++) {
+                        if (mask[i + delta[k]]) {
+                            n_mov++;
+                        }
+                    }
+
+                    if (n_mov < 2) {
+                        mask[i] = 0;
+                    }
+                }
+            }
+
+            for (int i = 0; i < y_size; i++) {
+                if (mask[i]) {
+                    y_plane[i] = 255;
+                } else {
+                    y_plane[i] /= 2;
                 }
             }
 			
@@ -217,6 +259,8 @@ int main(int argc, char **argv)
     SDL_Quit();
     fclose(file);
     free(frame);
+    free(prev_y_plane);
+    free(mask);
 
     return 0;
 }
