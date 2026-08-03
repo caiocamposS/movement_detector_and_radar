@@ -1,20 +1,6 @@
-# movement_detector_and_radar
+# 🎥 Detecção de Movimento e Velocidade em Vídeos Raw (YUV420p)
 
-# 🎥 Detecção de Movimento em Vídeos Raw (YUV420p)
-
-Este projeto consiste em um **player de vídeo desenvolvido em C** utilizando a biblioteca **SDL2**, capaz de reproduzir arquivos **Raw YUV420p** e realizar **detecção de movimento em tempo real**.
-
-A detecção é baseada na comparação da **luminosidade (Plano Y)** entre quadros consecutivos. Quando a diferença de brilho ultrapassa um determinado **limiar (threshold)**, o pixel é considerado em movimento e destacado em branco, enquanto o restante da imagem é escurecido para evidenciar a movimentação.
-
----
-
-## 🚀 Funcionalidades
-
-* 📹 Reprodução de vídeos no formato **Raw YUV420p**;
-* ⚡ Processamento em tempo real de vídeos de alta resolução (incluindo **4K**);
-* 🎯 Detecção de movimento baseada na diferença absoluta de brilho (Plano Y);
-* 🌑 Escurecimento automático do fundo (pixels estáticos);
-* ⏯️ Controles de reprodução (pausar e retomar).
+Este projeto consiste em um **player de vídeo desenvolvido em C** utilizando a biblioteca **SDL2**, capaz de reproduzir arquivos **Raw YUV420p** e realizar **detecção de movimento em tempo real, bem como a identificação da velocidade desses movimentos**.
 
 ---
 
@@ -99,54 +85,3 @@ Durante a reprodução, as seguintes teclas estão disponíveis:
 | ---------------- | ---------------------------- |
 | **Espaço**       | Pausa ou retoma a reprodução |
 | **Q** ou **ESC** | Encerra o player             |
-
----
-
-## 🧠 Funcionamento do Algoritmo
-
-O formato **YUV420p** separa a imagem em três componentes:
-
-* **Y (Luma):** brilho;
-* **U (Chroma):** componente de cor;
-* **V (Chroma):** componente de cor.
-
-O algoritmo utiliza apenas o **Plano Y (luminosidade)** para detectar movimento.
-
-O processamento ocorre da seguinte forma:
-
-1. O quadro atual é carregado na memória;
-2. Cada pixel do Plano **Y** é comparado com o pixel correspondente do quadro anterior;
-3. É calculada a diferença absoluta entre os valores de brilho:
-
-```c
-abs(atual - anterior)
-```
-
-4. Se essa diferença for maior ou igual ao valor de **THRESHOLD** (definido como `30`), o pixel é considerado em movimento e recebe valor máximo de brilho (`255`), aparecendo branco na tela;
-5. Caso contrário, o pixel é tratado como parte do fundo e seu brilho é reduzido pela metade, tornando-o mais escuro;
-6. Ao final do processamento, o quadro atual é armazenado como referência para a próxima comparação e a imagem processada é exibida.
-
----
-
-## 📌 Resumo do Fluxo
-
-```text
-Leitura do quadro atual
-          │
-          ▼
-Comparação com o quadro anterior
-          │
-          ▼
-Diferença de brilho (Plano Y)
-          │
-     ┌────┴────┐
-     │         │
-Diferença   Diferença
-≥ Threshold < Threshold
-     │         │
-     ▼         ▼
-Pixel branco  Fundo escurecido
-     │
-     ▼
-Exibição do quadro processado
-```
