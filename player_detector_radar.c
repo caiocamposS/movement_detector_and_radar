@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define THRESHOLD 22
+
 static void usage(const char *program)
 {
     fprintf(stderr,
@@ -58,6 +60,13 @@ int main(int argc, char **argv)
     uint8_t *frame = malloc(frame_size);
     if (!frame) {
         fprintf(stderr, "Falha ao alocar %zu bytes para o frame.\n", frame_size);
+        return 1;
+    }
+
+    // ALOCA PREV_Y_PLANE 
+    uint8_t *prev_y_plane = calloc(1, y_size); // UTILIZA CALLOC POIS INICIA COM ZERO
+    if (!prev_y_plane) {
+        fprintf(stderr, "Falha ao alocar %zu bytes para o plano y anterior.\n", y_size);
         return 1;
     }
 
@@ -122,6 +131,7 @@ int main(int argc, char **argv)
         uint32_t started_ms = SDL_GetTicks();
 
         SDL_Event event;
+        // Leitura de eventos (quit, pause)
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = 0;
@@ -142,6 +152,7 @@ int main(int argc, char **argv)
         	//aqui é feita a leitura de um frame do arquivo binário
             size_t read_bytes = fread(frame, 1, frame_size, file);
             if (read_bytes != frame_size) {
+                // Rewind para retornar ao primeiro frame caso o arquivo acabe
                 if (feof(file)) {
                     rewind(file);
                     read_bytes = fread(frame, 1, frame_size, file);
@@ -153,11 +164,30 @@ int main(int argc, char **argv)
                 }
             }
 
-            const uint8_t *y_plane = frame;
-            const uint8_t *u_plane = frame + y_size;
-            const uint8_t *v_plane = frame + y_size + uv_size;
+            uint8_t *y_plane = frame; // Começa na posicao 0
+            const uint8_t *u_plane = frame + y_size; // Vem logo depois
+            const uint8_t *v_plane = frame + y_size + uv_size; // Vem depois dos planos y e u
+            
 
-			//aqui será feita a exibição do frame na textura SDL
+            // SE EXISTIR PREV_Y_PLANE
+            if (prev_y_plane) {
+                for (int i = 0; i < y_size; i++) {
+                    uint8_t original_pix = y_plane[i];
+
+                    // DIFERENÇA ENTRE OS PIXEIS
+                    int diff = abs((int)y_plane[i] - (int)prev_y_plane[i]);
+
+                    prev_y_plane[i] = original_pix;
+
+                    if (diff >= THRESHOLD) {
+                        y_plane[i] = 255; // PINTA DE BRANCO
+                    } else {
+                        y_plane[i] /= 2; // ESCURECE O FUNDO IMOVEL
+                    }
+                }
+            }
+			
+            //aqui será feita a exibição do frame na textura SDL
             if (SDL_UpdateYUVTexture(texture,
                                      NULL,
                                      y_plane,
