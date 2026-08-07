@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define THRESHOLD 30
+#define THRESHOLD 20
 
 static void usage(const char *program)
 {
@@ -225,7 +225,7 @@ int main(int argc, char **argv)
                 if (mask[i]) {
                     y_plane[i] = 255;
                 } else {
-                    y_plane[i] /= 2;
+                    y_plane[i] = 0;
                 }
             }
 			
